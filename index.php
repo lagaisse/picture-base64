@@ -1,25 +1,31 @@
 <?php
-$target_dir = "../exif-orientation-examples/";
+$target_dir = "../exif-orientation-examples";
 
 
 $files=[];
 
 foreach(glob($target_dir.'/*.*') as $file) {
-    $imageFileType = pathinfo($file,PATHINFO_EXTENSION);
     //picture or fake picture ?
     $check = getimagesize($file);
-    if($check !== false) {
+    if($check !== FALSE) {
         //echo "File is an image - " . $check["mime"] . ".";
         $fileOK = 1;
     } else {
         //echo "File is not an image.";
-        $fileOK = 0;
+        $fileOK = 0;  
     }
     // Check file size
     if (filesize($file) > 500000) {
         //echo "Sorry, your file is too large.";
         $fileOK = 0;
     }
+    // $check[2] == exif_imagetype($file)
+    $imageFileType = image_type_to_extension($check[2], FALSE); 
+    if ($imageFileType === FALSE)
+    {
+        $imageFileType = pathinfo($file,PATHINFO_EXTENSION);
+    }
+  
     // Allow certain file formats
     if($imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "jpeg"
     && $imageFileType != "gif" ) {
@@ -34,12 +40,47 @@ foreach(glob($target_dir.'/*.*') as $file) {
     } else {
         $data = file_get_contents($file);
         $base64 = 'data:image/' . $imageFileType . ';base64,' . base64_encode($data);
-        $files[] = ['path' => $file, 'data' => $base64, 'exif' => read_exif_data($base64)];
+        $exif_data = read_exif_data($base64);
+        $exif_orientation = 1;
+        if ($exif_data !== FALSE)
+        {
+            $exif_orientation = $exif_data['Orientation'];
+        }
+     
+        $files[] = ['path' => $file, 'data' => $base64, 'exif' => read_exif_data($base64), 'orientation' => $exif_orientation];
     }
 
 }
 
-
+function picture_orientate(&$picture, $orientation=1)
+{
+    switch($orientation) {
+        case 2:
+            imageflip($picture, IMG_FLIP_HORIZONTAL);
+            break;
+        case 3:
+            $picture = imagerotate($picture, 180, 0);
+            break;
+        case 4:
+            imageflip($picture, IMG_FLIP_VERTICAL);
+            break;
+        case 5:
+            $picture = imagerotate($picture, -90, 0);
+            imageflip($picture, IMG_FLIP_HORIZONTAL);
+            break;
+        case 6:
+            $picture = imagerotate($picture, -90, 0);
+            break;
+        case 7:
+            $picture = imagerotate($picture, 90, 0);
+            imageflip($picture, IMG_FLIP_HORIZONTAL);
+            break;
+        case 8:
+            $picture = imagerotate($picture, 90, 0);
+            break;
+    }
+    return $picture;
+}
 
 ?><html>
    <head>
@@ -72,10 +113,11 @@ h1 {
     <table class="table table-responsive">
         <thead>
             <tr>
-                <th>#</th>
-                <th>Picture</th>
-                <th>Base64 picture</th>
-                <th>EXIF Data</th>
+                <th class="col-md-1">#</th>
+                <th class="col-md-3">Source picture</th>
+                <th class="col-md-2">Base64 picture</th>
+                <th class="col-md-3">EXIF Data</th>
+                <th class="col-md-3">Oriented picture</th>
             </tr>
         </thead>
         <tbody>
@@ -100,6 +142,17 @@ h1 {
                     print_r($filebase64['exif']);
                     ?>            
                     </pre>
+                </td>
+                <td> 
+<?php
+                    $picture = imagecreatefromstring(file_get_contents($filebase64['path']));
+                    $picture = picture_orientate($picture, $filebase64['orientation']);
+                    ob_start();
+                    imagejpeg($picture);
+                    $contents =  ob_get_contents();
+                    ob_end_clean();
+?>
+                    <img class="img-responsive" src="data:image/jpeg;base64,<?php echo base64_encode($contents); ?>" alt="Computed <?php echo $filebase64['path']; ?>"/>
                 </td>
             </tr>
 <?php  } ?>
