@@ -42,7 +42,7 @@ foreach(glob($target_dir.'/*.*') as $file) {
         $base64 = 'data:image/' . $imageFileType . ';base64,' . base64_encode($data);
         $exif_data = read_exif_data($base64);
         $exif_orientation = 1;
-        if ($exif_data !== FALSE)
+        if ($exif_data !== FALSE && isset($exif_data['Orientation']))
         {
             $exif_orientation = $exif_data['Orientation'];
         }
