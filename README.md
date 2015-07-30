@@ -1,5 +1,7 @@
 # picture-base64
-This script displays base64 data and exif data from pictures
+This script displays in a web page base64 data and exif data from images. It even experiments image orientation.
+
+This is a helpful tool when testing image upload and management.
 
 Configuration
 ---------
